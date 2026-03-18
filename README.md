@@ -37,7 +37,7 @@ Users can enter a startup idea, and the platform coordinates multiple AI agents 
 - Ollama
 
 ### Vector Database
-- LanceDB
+- ChromaDB
 
 
 ## System Architecture
