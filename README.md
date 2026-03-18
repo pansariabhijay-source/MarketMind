@@ -1,4 +1,4 @@
-# MarketMind — AI Market Research Crew
+# MarketMind - AI Market Research Crew
 
 An AI-powered market research platform that uses multiple autonomous agents to analyze startup ideas and generate structured market insights.
 
