@@ -1,0 +1,130 @@
+market_research_task:
+  description: >
+    Research this idea: {product_idea}.
+    Do NOT assume it is AI/tech. Research the exact industry described.
+    Find: market size, top 2 growth trends, key industry dynamics, major players.
+    Use web search. Cite every stat with source name.
+  expected_output: >
+    - Market size: [figure] (Source: X)
+    - CAGR: [figure] (Source: X)
+    - Growth trend 1: [stat] (Source: X)
+    - Growth trend 2: [stat] (Source: X)
+    - Key dynamic: [insight]
+    - Major players: [list]
+    Mark any unsourced stat as UNVERIFIED.
+  agent: market_research_specialist
+
+
+fact_check_task:
+  description: >
+    Review the market research output.
+    Mark any stat without a named source as UNVERIFIED.
+    Remove clearly fabricated data. Keep all verified facts intact.
+  expected_output: >
+    Same bullet points, cleaned. Mark bad claims as UNVERIFIED. Keep all detail.
+  agent: fact_checker
+
+
+competitive_intelligence_task:
+  description: >
+    Find competitors for: {product_idea}.
+    Research the exact industry. Find 4 real direct competitors.
+  expected_output: >
+    - Competitor 1: [name] — [offering] — [pricing] — [strength] — [weakness]
+    - Competitor 2: [name] — [offering] — [pricing] — [strength] — [weakness]
+    - Competitor 3: [name] — [offering] — [pricing] — [strength] — [weakness]
+    - Competitor 4: [name] — [offering] — [pricing] — [strength] — [weakness]
+    - Key market gap: [insight]
+  agent: competitive_intelligence_analyst
+
+
+customer_insights_task:
+  description: >
+    Identify customers for: {product_idea}.
+    Do NOT assume it is AI/tech. Find 2 customer segments with pain points.
+  expected_output: >
+    - Segment 1: [who] — Pain: [points] — WTP: [amount] — Trigger: [trigger]
+    - Segment 2: [who] — Pain: [points] — WTP: [amount] — Trigger: [trigger]
+    - ICP: [1 sentence summary]
+  agent: customer_insights_researcher
+
+
+product_strategy_task:
+  description: >
+    Build a strategy for: {product_idea}.
+    Do NOT add AI features unless the idea includes them.
+    Use prior research only. Be specific and actionable.
+  expected_output: >
+    - Core offering: [what it is]
+    - Key differentiators: [3 points vs competitors]
+    - MVP features: [5 specific features]
+    - Pricing: [tiers and price points]
+    - GTM: [channels and approach]
+    - 6-month goal: [specific measurable goal]
+    - 12-month goal: [specific measurable goal]
+  agent: product_strategy_advisor
+
+
+business_analyst_task:
+  description: >
+    Write a concise but complete market research report for: {product_idea}.
+    Use ONLY verified research from previous agents.
+    Write in clean professional markdown. Be concise — every section max 3-4 sentences or a short table.
+    Do NOT repeat information across sections.
+  expected_output: >
+    # {product_idea} — Market Research Report
+
+    ## Executive Summary
+    2-3 sentences: opportunity, market size, recommendation.
+
+    ## Market Overview
+    Market size, CAGR, 2 key trends. Cite sources. Max 4 sentences.
+
+    ## Competitive Landscape
+    | Competitor | Offering | Pricing | Strength | Weakness |
+    |------------|----------|---------|----------|----------|
+    | Name | Details | Price | Point | Point |
+    (4 rows max)
+
+    ## Customer Insights
+    2 segments. For each: who they are, top pain point, willingness to pay.
+
+    ## Product Strategy
+    Core offering, top 3 differentiators, 5 MVP features, pricing tiers.
+
+    ## Business Model
+    Revenue model, 2-3 key risks.
+
+    ## Final Recommendation
+    Go / No-Go / Conditional — 2 sentence reason.
+
+  agent: business_analyst
+
+
+hallucination_guard_task:
+  description: >
+    Audit all agent outputs for: {product_idea}.
+    Count real claims. Calculate real metrics. No placeholders.
+  expected_output: >
+    ## Hallucination Risk Score: [LOW / MEDIUM / HIGH]
+
+    ## Error Metrics
+    | Metric | Value |
+    |--------|-------|
+    | Total Claims Analyzed | [n] |
+    | Verified Claims | [n] |
+    | Unverified Claims | [n] |
+    | Unverified Claim Rate | [n]% |
+    | Overall Reliability Score | [n]/100 |
+
+    ## Key Contradictions
+    None detected. OR list them.
+
+    ## Recommendation Validity
+    YES/NO + 1 sentence.
+
+    ## Key Caveats
+    - Caveat 1
+    - Caveat 2
+
+  agent: hallucination_guard
