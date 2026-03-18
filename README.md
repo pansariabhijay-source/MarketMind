@@ -1,4 +1,10 @@
 # MarketMind - AI Market Research Crew
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![CrewAI](https://img.shields.io/badge/CrewAI-Multi--Agent-black)
+![Tailwind](https://img.shields.io/badge/TailwindCSS-UI-38B2AC)
+![Vite](https://img.shields.io/badge/Vite-Build-purple)
 
 An AI-powered market research platform that uses multiple autonomous agents to analyze startup ideas and generate structured market insights.
 
