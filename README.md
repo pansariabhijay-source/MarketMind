@@ -1,8 +1,51 @@
 # MarketMind — AI Market Research Crew
 
-A full-stack web app wrapping your CrewAI market research pipeline with a polished React frontend and FastAPI backend.
+An AI-powered market research platform that uses multiple autonomous agents to analyze startup ideas and generate structured market insights.
 
+The system combines CrewAI multi-agent orchestration , a FastAPI backend , and a React frontend to deliver interactive research reports.
+
+Users can enter a startup idea, and the platform coordinates multiple AI agents to perform:
+
+- Market research
+- Competitive analysis
+- Customer insights
+- Fact verification
+- Business strategy generation
 ---
+## Tech Stack
+
+### Frontend
+- React
+- Vite
+- TailwindCSS
+
+### Backend
+- FastAPI
+- Python
+
+### AI / Agents
+- CrewAI (multi-agent orchestration)
+
+### LLM Providers
+- Cerebras
+- Ollama
+
+### Vector Database
+- LanceDB
+
+
+## System Architecture
+
+![MarketMind Pipeline](marketmind_pipeline.svg)
+
+The platform runs a **multi-agent research pipeline**:
+
+1. **Market Research Agent** – gathers industry insights  
+2. **Fact Checker Agent** – validates claims and removes hallucinations  
+3. **Competitive Intelligence Agent** – analyzes competitors  
+4. **Customer Insight Agent** – studies target users  
+5. **Product Strategy Agent** – suggests product positioning  
+6. **Business Analysis Agent** – generates the final market report
 
 ## Project Structure
 
