@@ -118,5 +118,5 @@
 
   <text x="340" y="910" text-anchor="middle" font-size="10" fill="#B4B2A9" font-family="'Segoe UI',Arial,sans-serif">CrewAI · Cerebras llama3.1-8b · FastAPI · ChromaDB · React + Vite</text>
   <text x="340" y="928" text-anchor="middle" font-size="10" fill="#B4B2A9" font-family="'Segoe UI',Arial,sans-serif">Sequential pipeline · semantic cache at 0.82 similarity threshold</text>
-  <text x="340" y="968" text-anchor="middle" font-size="10" fill="#D3D1C7" font-family="'Segoe UI',Arial,sans-serif">github.com/YOUR_USERNAME/marketmind</text>
+  <text x="340" y="968" text-anchor="middle" font-size="10" fill="#D3D1C7" font-family="'Segoe UI',Arial,sans-serif">github.com/pansariabhijay-source/marketmind</text>
 </svg>
