@@ -4,5 +4,3 @@ crewai
 crewai-tools
 python-dotenv
 langchain-groq
-chromadb
-sentence-transformers
