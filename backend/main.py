@@ -8,8 +8,8 @@ import time
 import threading
 from datetime import datetime
 from typing import Optional
-from crew import MarketResearchCrew
-from vector_store import (
+from backend.crew import MarketResearchCrew
+from backend.vector_store import (
     search_similar_report,
     store_report,
     store_agent_knowledge,
