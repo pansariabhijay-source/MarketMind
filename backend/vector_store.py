@@ -8,39 +8,59 @@ Handles:
 - Similarity scoring (0-1) for cache hits
 """
 
-import chromadb
-from chromadb.utils import embedding_functions
 import hashlib
 import json
 from datetime import datetime
 from typing import Optional
 
-# ── Setup ─────────────────────────────────────────────────────────────────────
+# ── Lazy Setup ────────────────────────────────────────────────────────────────
+# All heavy objects are lazy-loaded on first use so that uvicorn can bind
+# the port immediately on Render (avoids port-scan timeout).
 
-# PersistentClient stores data on disk in ./chroma_db folder
-# Data survives server restarts
-client = chromadb.PersistentClient(path="./chroma_db")
+_client = None
+_embedding_fn = None
+_reports_collection = None
+_knowledge_collection = None
 
-# Use sentence-transformers for embeddings (runs locally, no API needed)
-# all-MiniLM-L6-v2 is small, fast, and great for semantic similarity
-embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="all-MiniLM-L6-v2"
-)
 
-# Two collections:
-# 1. reports — full final reports (for cache hits + UI display)
-# 2. knowledge — individual agent findings (for context injection)
-reports_collection = client.get_or_create_collection(
-    name="market_reports",
-    embedding_function=embedding_fn,
-    metadata={"hnsw:space": "cosine"}  # cosine similarity = better for text
-)
+def _get_client():
+    global _client
+    if _client is None:
+        import chromadb
+        _client = chromadb.PersistentClient(path="./chroma_db")
+    return _client
 
-knowledge_collection = client.get_or_create_collection(
-    name="research_knowledge",
-    embedding_function=embedding_fn,
-    metadata={"hnsw:space": "cosine"}
-)
+
+def _get_embedding_fn():
+    global _embedding_fn
+    if _embedding_fn is None:
+        from chromadb.utils import embedding_functions
+        _embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
+    return _embedding_fn
+
+
+def _get_reports_collection():
+    global _reports_collection
+    if _reports_collection is None:
+        _reports_collection = _get_client().get_or_create_collection(
+            name="market_reports",
+            embedding_function=_get_embedding_fn(),
+            metadata={"hnsw:space": "cosine"}
+        )
+    return _reports_collection
+
+
+def _get_knowledge_collection():
+    global _knowledge_collection
+    if _knowledge_collection is None:
+        _knowledge_collection = _get_client().get_or_create_collection(
+            name="research_knowledge",
+            embedding_function=_get_embedding_fn(),
+            metadata={"hnsw:space": "cosine"}
+        )
+    return _knowledge_collection
 
 # ── Similarity threshold ───────────────────────────────────────────────────────
 # Above this = cache hit (return existing report)
@@ -68,11 +88,11 @@ def search_similar_report(product_idea: str) -> Optional[dict]:
           if similarity score > 0.82
     """
     try:
-        count = reports_collection.count()
+        count = _get_reports_collection().count()
         if count == 0:
             return None
 
-        results = reports_collection.query(
+        results = _get_reports_collection().query(
             query_texts=[product_idea],
             n_results=1,
             include=["documents", "metadatas", "distances"]
@@ -122,7 +142,7 @@ def store_report(
 
         # Store the idea as the document (this gets embedded for search)
         # Store full reports in metadata (not embedded — too large)
-        reports_collection.upsert(
+        _get_reports_collection().upsert(
             ids=[doc_id],
             documents=[product_idea],
             metadatas=[{
@@ -153,7 +173,7 @@ def store_agent_knowledge(
     """
     try:
         doc_id = make_id(f"{product_idea}_{agent_name}")
-        knowledge_collection.upsert(
+        _get_knowledge_collection().upsert(
             ids=[doc_id],
             documents=[content],
             metadatas=[{
@@ -176,11 +196,11 @@ def get_relevant_context(query: str, n_results: int = 1) -> str:
         → Returns 3 most relevant past findings as a string
     """
     try:
-        count = knowledge_collection.count()
+        count = _get_knowledge_collection().count()
         if count == 0:
             return ""
 
-        results = knowledge_collection.query(
+        results = _get_knowledge_collection().query(
             query_texts=[query],
             n_results=min(n_results, count),
             include=["documents", "metadatas", "distances"]
@@ -214,11 +234,11 @@ def get_all_stored_ideas() -> list:
     Get all stored product ideas — used for the UI 'Similar Reports' feature.
     """
     try:
-        count = reports_collection.count()
+        count = _get_reports_collection().count()
         if count == 0:
             return []
 
-        results = reports_collection.get(
+        results = _get_reports_collection().get(
             include=["metadatas"]
         )
         return [
@@ -238,8 +258,8 @@ def get_stats() -> dict:
     """Return stats about the vector store"""
     try:
         return {
-            "total_reports":   reports_collection.count(),
-            "total_knowledge": knowledge_collection.count(),
+            "total_reports":   _get_reports_collection().count(),
+            "total_knowledge": _get_knowledge_collection().count(),
         }
     except:
         return {"total_reports": 0, "total_knowledge": 0}

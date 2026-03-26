@@ -8,15 +8,6 @@ import time
 import threading
 from datetime import datetime
 from typing import Optional
-from backend.crew import MarketResearchCrew
-from backend.vector_store import (
-    search_similar_report,
-    store_report,
-    store_agent_knowledge,
-    get_relevant_context,
-    get_all_stored_ideas,
-    get_stats
-)
 
 os.makedirs("reports", exist_ok=True)
 
@@ -24,7 +15,7 @@ app = FastAPI(title="MarketMind API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -157,6 +148,9 @@ def run_crew_in_thread(job_id: str, product_idea: str):
         timer = threading.Thread(target=step_advancer, daemon=True)
         timer.start()
 
+        from backend.vector_store import get_relevant_context
+        from backend.crew import MarketResearchCrew
+
         context = get_relevant_context(product_idea)
         enriched_idea = product_idea
         if context:
@@ -192,6 +186,7 @@ def run_crew_in_thread(job_id: str, product_idea: str):
         jobs[job_id]["hallucination_report"] = hallucination_report
 
         if report:
+            from backend.vector_store import store_report, store_agent_knowledge
             store_report(job_id, product_idea, report, hallucination_report)
             store_agent_knowledge(product_idea, "full_report", report[:2000])
 
@@ -208,6 +203,7 @@ def start_run(req: RunRequest):
 
     product_idea = req.product_idea.strip()
 
+    from backend.vector_store import search_similar_report
     cached = search_similar_report(product_idea)
     if cached:
         print(f"[Cache HIT] Similarity: {cached['similarity']} — returning cached report")
@@ -278,11 +274,13 @@ def get_agents():
 
 @app.get("/api/vectordb/stats")
 def vectordb_stats():
+    from backend.vector_store import get_stats
     return get_stats()
 
 
 @app.get("/api/vectordb/ideas")
 def vectordb_ideas():
+    from backend.vector_store import get_all_stored_ideas
     return get_all_stored_ideas()
 
 
@@ -298,9 +296,18 @@ def vectordb_clear():
 
 @app.get("/health")
 def health():
+    from backend.vector_store import get_stats
     stats = get_stats()
     return {
         "status": "ok",
         "timestamp": datetime.utcnow().isoformat(),
         "vectordb": stats
     }
+
+
+import os
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)
