@@ -166,7 +166,7 @@ def store_agent_knowledge(
         print(f"[VectorDB] Knowledge store error: {e}")
 
 
-def get_relevant_context(query: str, n_results: int = 3) -> str:
+def get_relevant_context(query: str, n_results: int = 1) -> str:
     """
     Retrieve relevant past research findings for a query.
     Used to inject verified context into agent prompts.
@@ -196,7 +196,7 @@ def get_relevant_context(query: str, n_results: int = 3) -> str:
             results["distances"][0]
         ):
             similarity = 1 - (dist / 2)
-            if similarity > 0.5:  # Only include reasonably similar findings
+            if similarity > 0.75:  # Only include reasonably similar findings
                 context_parts.append(
                     f"[Past research on '{meta.get('product_idea', 'unknown')}' "
                     f"by {meta.get('agent', 'unknown')} — similarity {similarity:.0%}]\n{doc}"

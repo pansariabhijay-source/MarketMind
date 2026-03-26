@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarketMind — AI-Powered Market Intelligence</title>
+  <meta name="description" content="Drop your startup idea. Seven AI agents research the market, map competitors, profile customers, and deliver a verified report in minutes." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="#" class="nav__logo" id="logo-home" aria-label="MarketMind Home">
+        <div class="nav__logo-icon"><div class="nav__logo-dot"></div></div>
+        <span class="nav__logo-text">MARKETMIND</span>
+      </a>
+      <div class="nav__links">
+        <a href="#how-it-works" class="nav__link nav__link--home">How It Works</a>
+        <a href="#features" class="nav__link nav__link--home">Features</a>
+        <a href="#why" class="nav__link nav__link--home">Why Us</a>
+        <button class="nav__cta-btn nav__link--running" id="nav-new-btn" style="display:none;">+ New Analysis</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       VIEW: HOME (Landing Page)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div id="view-home">
+
+    <!-- HERO -->
+    <section class="hero" id="hero">
+      <div class="hero__bg">
+        <div class="hero__grid-overlay"></div>
+        <div class="hero__glow hero__glow--1"></div>
+        <div class="hero__glow hero__glow--2"></div>
+        <div class="hero__noise"></div>
+      </div>
+      <div class="hero__content">
+        <div class="hero__badge" data-animate="fade-up" data-delay="0">
+          <span class="hero__badge-dot"></span>
+          <span class="hero__badge-text">System Online</span>
+          <span class="hero__badge-sep">·</span>
+          <span class="hero__badge-meta">7 Agents · Sequential Pipeline</span>
+        </div>
+        <div class="hero__titles" data-animate="fade-up" data-delay="1">
+          <h1 class="hero__title-line1">MARKET</h1>
+          <div class="hero__title-row">
+            <h1 class="hero__title-line2">INTEL</h1>
+            <p class="hero__subtitle">Drop your idea. Seven AI agents research the market, map competitors, profile customers, and deliver a verified report.</p>
+          </div>
+        </div>
+        <div class="hero__input-wrap" data-animate="fade-up" data-delay="2">
+          <div class="hero__input-box" id="hero-input-box">
+            <div class="hero__input-corners">
+              <span class="corner corner--tl"></span><span class="corner corner--tr"></span>
+              <span class="corner corner--bl"></span><span class="corner corner--br"></span>
+            </div>
+            <div class="hero__input-header">
+              <span class="hero__input-label">Input</span>
+              <span class="hero__input-cursor">_</span>
+            </div>
+            <textarea id="hero-input" rows="3" placeholder="Describe your startup idea in detail…"></textarea>
+            <div class="hero__input-footer">
+              <span class="hero__input-hint">Ctrl + Enter to run</span>
+              <button class="hero__run-btn" id="hero-run-btn"><span>RUN ANALYSIS</span><span class="hero__run-arrow">→</span></button>
+            </div>
+          </div>
+          <p class="hero__error" id="hero-error" style="display:none;"></p>
+          <div class="hero__history" id="hero-history" style="display:none;">
+            <div class="hero__history-header">
+              <span class="hero__history-label">Recent Analyses</span>
+              <button class="hero__history-clear" id="history-clear-btn">Clear</button>
+            </div>
+            <div class="hero__history-list" id="hero-history-list"></div>
+          </div>
+        </div>
+        <div class="hero__examples" data-animate="fade-up" data-delay="3">
+          <div class="hero__examples-header">
+            <span class="hero__examples-label">Suggested</span>
+            <div class="hero__examples-line"></div>
+            <button class="hero__examples-shuffle" id="shuffle-btn">↻ Shuffle</button>
+          </div>
+          <div class="hero__examples-grid" id="examples-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE SHOWCASE -->
+    <section class="pipeline" id="pipeline">
+      <div class="pipeline__header">
+        <span class="section-tag">Pipeline</span>
+        <h2 class="section-title">Seven Agents. One Mission.</h2>
+        <p class="section-desc">Each agent specializes in a critical dimension of market research, executing sequentially with verified handoffs.</p>
+      </div>
+      <div class="pipeline__track-wrap">
+        <div class="pipeline__track" id="pipeline-track">
+          <div class="pipeline__card" data-agent="0"><div class="pipeline__card-idx">01</div><div class="pipeline__card-icon">🔍</div><h3>Market Research</h3><p>TAM, SAM, growth trends, industry dynamics, and major players with sourced statistics.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="1"><div class="pipeline__card-idx">02</div><div class="pipeline__card-icon">🏆</div><h3>Competitive Intel</h3><p>Map real competitors — their positioning, features, pricing, strengths, and weaknesses.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="2"><div class="pipeline__card-idx">03</div><div class="pipeline__card-icon">👥</div><h3>Customer Insights</h3><p>Identify customer segments, pain points, willingness to pay, and purchase triggers.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="3"><div class="pipeline__card-idx">04</div><div class="pipeline__card-icon">🗺️</div><h3>Product Strategy</h3><p>MVP features, differentiation points, pricing tiers, and go-to-market roadmap.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="4"><div class="pipeline__card-idx">05</div><div class="pipeline__card-icon">✅</div><h3>Fact Verification</h3><p>Combined verification. Unsourced statistics flagged as UNVERIFIED. Fabricated data removed.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="5"><div class="pipeline__card-idx">06</div><div class="pipeline__card-icon">📊</div><h3>Business Analysis</h3><p>Synthesize everything into a Go / No-Go verdict with revenue model and risk analysis.</p><div class="pipeline__card-glow"></div></div>
+          <div class="pipeline__card" data-agent="6"><div class="pipeline__card-idx">07</div><div class="pipeline__card-icon">🛡️</div><h3>Hallucination Guard</h3><p>Cross-verify all outputs. Detect contradictions, fabricated data, and assign reliability scores.</p><div class="pipeline__card-glow"></div></div>
+        </div>
+      </div>
+      <div class="pipeline__connector"><div class="pipeline__connector-line" id="pipeline-line"></div><div class="pipeline__connector-pulse" id="pipeline-pulse"></div></div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how" id="how-it-works">
+      <div class="how__inner">
+        <span class="section-tag">How It Works</span>
+        <h2 class="section-title">From Idea to Intel in&nbsp;Minutes</h2>
+        <div class="how__steps">
+          <div class="how__step" data-step="1">
+            <div class="how__step-num">01</div>
+            <div class="how__step-content"><h3>Describe Your Idea</h3><p>Enter your startup concept — any industry, any model. Our agents adapt to research exactly what you describe.</p></div>
+            <div class="how__step-visual"><div class="how__mock-input"><span class="how__mock-cursor"></span><span class="how__mock-text">AI-powered legal document review for SMBs…</span></div></div>
+          </div>
+          <div class="how__step" data-step="2">
+            <div class="how__step-num">02</div>
+            <div class="how__step-content"><h3>Agents Analyze</h3><p>Seven specialized agents execute sequentially — researching, fact-checking, analyzing competitors, profiling customers, and building strategy.</p></div>
+            <div class="how__step-visual"><div class="how__agent-flow"><div class="how__agent-dot active"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div><div class="how__agent-line"></div><div class="how__agent-dot"></div></div></div>
+          </div>
+          <div class="how__step" data-step="3">
+            <div class="how__step-num">03</div>
+            <div class="how__step-content"><h3>Get Verified Report</h3><p>Receive a comprehensive, hallucination-checked market research report with Go / No-Go recommendation — backed by real data.</p></div>
+            <div class="how__step-visual"><div class="how__report-mock"><div class="how__report-bar"></div><div class="how__report-line w80"></div><div class="how__report-line w60"></div><div class="how__report-line w90"></div><div class="how__report-line w40"></div><div class="how__report-badge">GO ✓</div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD PREVIEW -->
+    <section class="dashboard" id="dashboard">
+      <div class="dashboard__inner">
+        <span class="section-tag">Live Dashboard</span>
+        <h2 class="section-title">Intelligence at a Glance</h2>
+        <p class="section-desc">Real-time metrics from your research pipeline, powered by vector embeddings and semantic caching.</p>
+        <div class="dashboard__grid">
+          <div class="dashboard__stat-card"><div class="dashboard__stat-label">Reports Generated</div><div class="dashboard__stat-value" data-count="2847">0</div><div class="dashboard__stat-trend up">+23% this month</div></div>
+          <div class="dashboard__stat-card"><div class="dashboard__stat-label">Claims Verified</div><div class="dashboard__stat-value" data-count="18420">0</div><div class="dashboard__stat-trend up">98.2% accuracy</div></div>
+          <div class="dashboard__stat-card"><div class="dashboard__stat-label">Industries Covered</div><div class="dashboard__stat-value" data-count="156">0</div><div class="dashboard__stat-trend neutral">Global coverage</div></div>
+          <div class="dashboard__stat-card"><div class="dashboard__stat-label">Avg. Report Time</div><div class="dashboard__stat-value" data-count="4" data-suffix="min">0</div><div class="dashboard__stat-trend down">-40% vs manual</div></div>
+        </div>
+        <div class="dashboard__chart-wrap">
+          <div class="dashboard__chart-header"><span class="dashboard__chart-title">Research Pipeline Activity</span><div class="dashboard__chart-legend"><span class="legend-dot gold"></span> Reports <span class="legend-dot teal"></span> Cache Hits</div></div>
+          <div class="dashboard__chart" id="dashboard-chart">
+            <div class="chart__bars">
+              <div class="chart__bar-group" style="--h1: 40%; --h2: 10%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Mon</span></div>
+              <div class="chart__bar-group" style="--h1: 65%; --h2: 25%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Tue</span></div>
+              <div class="chart__bar-group" style="--h1: 50%; --h2: 30%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Wed</span></div>
+              <div class="chart__bar-group" style="--h1: 80%; --h2: 45%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Thu</span></div>
+              <div class="chart__bar-group" style="--h1: 70%; --h2: 50%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Fri</span></div>
+              <div class="chart__bar-group" style="--h1: 90%; --h2: 60%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Sat</span></div>
+              <div class="chart__bar-group" style="--h1: 55%; --h2: 35%;"><div class="chart__bar gold"></div><div class="chart__bar teal"></div><span>Sun</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+      <div class="features__inner">
+        <span class="section-tag">Features</span>
+        <h2 class="section-title">Built for Serious Founders</h2>
+        <p class="section-desc">Every feature designed to give you an unfair advantage in market intelligence.</p>
+        <div class="features__grid">
+          <div class="feature-card"><div class="feature-card__icon">⚡</div><h3 class="feature-card__title">Blazing Fast</h3><p class="feature-card__desc">Powered by Cerebras inference. Full 7-agent pipeline completes in under 5 minutes.</p><div class="feature-card__shine"></div></div>
+          <div class="feature-card"><div class="feature-card__icon">🧠</div><h3 class="feature-card__title">Semantic Caching</h3><p class="feature-card__desc">ChromaDB vector store caches past research. Similar queries return instant results.</p><div class="feature-card__shine"></div></div>
+          <div class="feature-card"><div class="feature-card__icon">🛡️</div><h3 class="feature-card__title">Anti-Hallucination</h3><p class="feature-card__desc">Dedicated guard agent cross-verifies every claim with reliability scores and contradiction detection.</p><div class="feature-card__shine"></div></div>
+          <div class="feature-card"><div class="feature-card__icon">🌐</div><h3 class="feature-card__title">Live Web Search</h3><p class="feature-card__desc">Real-time web research via Serper API. Every statistic backed by named sources.</p><div class="feature-card__shine"></div></div>
+          <div class="feature-card"><div class="feature-card__icon">📊</div><h3 class="feature-card__title">Structured Reports</h3><p class="feature-card__desc">Professional markdown reports with executive summary, competitor tables, and Go/No-Go verdict.</p><div class="feature-card__shine"></div></div>
+          <div class="feature-card"><div class="feature-card__icon">🔌</div><h3 class="feature-card__title">API-First</h3><p class="feature-card__desc">FastAPI backend with REST endpoints. Integrate market intelligence into your existing workflow.</p><div class="feature-card__shine"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY -->
+    <section class="why" id="why">
+      <div class="why__inner">
+        <div class="why__left">
+          <span class="section-tag">The Problem</span>
+          <h2 class="why__title">Traditional market research takes <em>weeks</em> and costs <em>thousands</em>.</h2>
+          <p class="why__text">Hiring consultants. Sifting through reports. Copy-pasting data into spreadsheets. By the time you have answers, the market has moved on.</p>
+        </div>
+        <div class="why__right">
+          <span class="section-tag gold">The Solution</span>
+          <h2 class="why__title">MarketMind delivers verified intelligence in <em>minutes</em>.</h2>
+          <div class="why__comparisons">
+            <div class="why__comparison"><div class="why__comp-old"><span class="why__comp-label">Traditional</span><span class="why__comp-value bad">2-4 weeks</span></div><div class="why__comp-arrow">→</div><div class="why__comp-new"><span class="why__comp-label">MarketMind</span><span class="why__comp-value good">~4 minutes</span></div></div>
+            <div class="why__comparison"><div class="why__comp-old"><span class="why__comp-label">Consultant Cost</span><span class="why__comp-value bad">$5,000+</span></div><div class="why__comp-arrow">→</div><div class="why__comp-new"><span class="why__comp-label">MarketMind</span><span class="why__comp-value good">Free</span></div></div>
+            <div class="why__comparison"><div class="why__comp-old"><span class="why__comp-label">Data Verification</span><span class="why__comp-value bad">Manual</span></div><div class="why__comp-arrow">→</div><div class="why__comp-new"><span class="why__comp-label">MarketMind</span><span class="why__comp-value good">Automated</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta" id="cta">
+      <div class="cta__inner">
+        <div class="cta__glow"></div>
+        <h2 class="cta__title">Ready to Research<br/>Smarter?</h2>
+        <p class="cta__text">Join founders who use AI-powered market intelligence to make data-driven decisions.</p>
+        <a href="#hero" class="cta__button"><span>Start Your First Analysis</span><span class="cta__button-arrow">→</span></a>
+        <p class="cta__footnote">No sign-up required · Free to use · Reports in minutes</p>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="footer__inner">
+        <div class="footer__col"><div class="nav__logo" style="pointer-events:none;"><div class="nav__logo-icon"><div class="nav__logo-dot"></div></div><span class="nav__logo-text">MARKETMIND</span></div><p class="footer__tagline">AI-powered market intelligence for founders who move fast.</p></div>
+        <div class="footer__col"><h4>Product</h4><a href="#how-it-works">How It Works</a><a href="#features">Features</a><a href="#pipeline">Pipeline</a><a href="#dashboard">Dashboard</a></div>
+        <div class="footer__col"><h4>Tech Stack</h4><a href="#">CrewAI</a><a href="#">Cerebras LLM</a><a href="#">ChromaDB</a><a href="#">FastAPI</a></div>
+        <div class="footer__col"><h4>Resources</h4><a href="#">API Docs</a><a href="#">GitHub</a><a href="#">Report Issues</a><a href="#">Changelog</a></div>
+      </div>
+      <div class="footer__bottom"><span>© 2025 MarketMind. Crafted with AI.</span></div>
+    </footer>
+  </div><!-- /view-home -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       VIEW: RUNNING (Agent Pipeline Progress)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div id="view-running" style="display:none;">
+    <section class="running">
+      <div class="running__bg">
+        <div class="hero__grid-overlay"></div>
+        <div class="hero__glow hero__glow--1"></div>
+        <div class="hero__glow hero__glow--2"></div>
+      </div>
+      <div class="running__inner">
+        <div class="running__status">
+          <span class="running__status-dot"></span>
+          <span class="running__status-text">Analysis Running</span>
+        </div>
+        <h2 class="running__idea" id="running-idea">Your Startup Idea</h2>
+
+        <div class="running__pipeline">
+          <div class="running__agent" data-step="0"><div class="running__agent-num">01</div><div class="running__agent-info"><div class="running__agent-icon">🔍</div><span class="running__agent-name">Market Research Specialist</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="1"><div class="running__agent-num">02</div><div class="running__agent-info"><div class="running__agent-icon">🏆</div><span class="running__agent-name">Competitive Intelligence Analyst</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="2"><div class="running__agent-num">03</div><div class="running__agent-info"><div class="running__agent-icon">👥</div><span class="running__agent-name">Customer Insights Researcher</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="3"><div class="running__agent-num">04</div><div class="running__agent-info"><div class="running__agent-icon">🗺️</div><span class="running__agent-name">Product Strategy Advisor</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="4"><div class="running__agent-num">05</div><div class="running__agent-info"><div class="running__agent-icon">✅</div><span class="running__agent-name">Fact Verification Specialist</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="5"><div class="running__agent-num">06</div><div class="running__agent-info"><div class="running__agent-icon">📊</div><span class="running__agent-name">Business Analyst & Synthesizer</span></div><div class="running__agent-status">waiting</div></div>
+          <div class="running__agent" data-step="6"><div class="running__agent-num">07</div><div class="running__agent-info"><div class="running__agent-icon">🛡️</div><span class="running__agent-name">Hallucination Guard</span></div><div class="running__agent-status">waiting</div></div>
+        </div>
+
+        <div class="running__progress-bar"><div class="running__progress-fill" id="running-progress"></div></div>
+
+        <div class="running__error" id="running-error" style="display:none;">
+          <p id="running-error-text"></p>
+          <button id="running-error-btn">← New Analysis</button>
+        </div>
+      </div>
+    </section>
+  </div><!-- /view-running -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       VIEW: REPORT (Final Output)
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div id="view-report" style="display:none;">
+    <section class="report">
+      <div class="report__inner">
+        <!-- Header -->
+        <div class="report__header">
+          <div class="report__header-left">
+            <div class="report__header-badge">
+              <span class="running__status-dot" style="animation:pulse-dot 2s ease infinite;"></span>
+              <span>Report Ready</span>
+              <span class="report__risk-badge" id="report-risk-badge"></span>
+            </div>
+            <h2 class="report__title" id="report-title">STARTUP IDEA</h2>
+            <p class="report__meta" id="report-meta"></p>
+            <div class="report__cache-banner" id="report-cache-banner" style="display:none;">
+              <span>⚡</span>
+              <div><strong>Instant Result — Retrieved from Vector DB</strong><br/><span id="report-cache-text"></span></div>
+            </div>
+          </div>
+          <div class="report__header-actions">
+            <button class="report__action-btn" id="copy-btn">Copy</button>
+            <button class="report__action-btn report__action-btn--gold" id="download-btn">↓ .md</button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="report__tabs">
+          <button class="report__tab active" id="tab-report" data-tab="report">📊 Full Report</button>
+          <button class="report__tab" id="tab-hallucination" data-tab="hallucination">🛡️ Hallucination Report</button>
+        </div>
+
+        <div class="report__divider"></div>
+
+        <!-- Report Content -->
+        <div class="report__content" id="report-content">
+          <div class="report__markdown" id="report-markdown"></div>
+        </div>
+
+        <!-- Hallucination Content -->
+        <div class="report__content" id="hallucination-content" style="display:none;">
+          <div class="report__markdown" id="hallucination-markdown"></div>
+        </div>
+
+        <!-- New Analysis -->
+        <div class="report__footer">
+          <button class="cta__button" id="report-new-btn"><span>+ New Analysis</span><span class="cta__button-arrow">→</span></button>
+        </div>
+      </div>
+    </section>
+  </div><!-- /view-report -->
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -17,11 +17,11 @@ market_research_task:
 
 fact_check_task:
   description: >
-    Review the market research output.
-    Mark any stat without a named source as UNVERIFIED.
+    Review the combined outputs from Market Research, Competitive Intelligence, Customer Insights, and Product Strategy.
+    Mark any stat, metric, or claim without a named source as UNVERIFIED.
     Remove clearly fabricated data. Keep all verified facts intact.
   expected_output: >
-    Same bullet points, cleaned. Mark bad claims as UNVERIFIED. Keep all detail.
+    The same insights and bullet points from all four previous agents, cleaned. Mark bad claims as UNVERIFIED. Keep all details.
   agent: fact_checker
 
 

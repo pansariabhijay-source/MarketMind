@@ -81,6 +81,17 @@ export default function App() {
 
   useEffect(() => { getHistory().then(setHistory).catch(() => {}) }, [])
 
+  // Read ?idea= from landing page redirect and auto-fill input
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const idea = params.get('idea')
+    if (idea) {
+      setInput(idea)
+      // Clean URL without reloading
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   const handleSubmit = async () => {
     if (!input.trim() || loading) return
     setError(null)

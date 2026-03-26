@@ -12,13 +12,13 @@ load_dotenv()
 llm_fast = LLM(
     model="cerebras/llama3.1-8b",
     temperature=0.1,
-    max_tokens=800,
+    max_tokens=2048,
 )
 
 llm_full = LLM(
     model="cerebras/llama3.1-8b",
     temperature=0.2,
-    max_tokens=1000,
+    max_tokens=4096,
 )
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ class MarketResearchCrew():
 
     @agent
     def market_research_specialist(self) -> Agent:
-        return Agent(config=self.agents_config["market_research_specialist"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=2)
+        return Agent(config=self.agents_config["market_research_specialist"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=5)
 
     @agent
     def fact_checker(self) -> Agent:
@@ -53,11 +53,11 @@ class MarketResearchCrew():
 
     @agent
     def competitive_intelligence_analyst(self) -> Agent:
-        return Agent(config=self.agents_config["competitive_intelligence_analyst"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=2)
+        return Agent(config=self.agents_config["competitive_intelligence_analyst"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=5)
 
     @agent
     def customer_insights_researcher(self) -> Agent:
-        return Agent(config=self.agents_config["customer_insights_researcher"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=2)
+        return Agent(config=self.agents_config["customer_insights_researcher"], tools=toolkit, llm=llm_fast, use_system_prompt=True, max_iter=5)
 
     @agent
     def product_strategy_advisor(self) -> Agent:
@@ -77,25 +77,30 @@ class MarketResearchCrew():
 
     @task
     def fact_check_task(self) -> Task:
-        return Task(config=self.tasks_config["fact_check_task"], context=[self.market_research_task()])
+        return Task(config=self.tasks_config["fact_check_task"], context=[
+            self.market_research_task(),
+            self.competitive_intelligence_task(),
+            self.customer_insights_task(),
+            self.product_strategy_task()
+        ])
 
     @task
     def competitive_intelligence_task(self) -> Task:
-        return Task(config=self.tasks_config["competitive_intelligence_task"], context=[self.fact_check_task()])
+        return Task(config=self.tasks_config["competitive_intelligence_task"], context=[self.market_research_task()])
 
     @task
     def customer_insights_task(self) -> Task:
-        return Task(config=self.tasks_config["customer_insights_task"], context=[self.fact_check_task(), self.competitive_intelligence_task()])
+        return Task(config=self.tasks_config["customer_insights_task"], context=[self.market_research_task(), self.competitive_intelligence_task()])
 
     @task
     def product_strategy_task(self) -> Task:
-        return Task(config=self.tasks_config["product_strategy_task"], context=[self.fact_check_task(), self.competitive_intelligence_task(), self.customer_insights_task()])
+        return Task(config=self.tasks_config["product_strategy_task"], context=[self.market_research_task(), self.competitive_intelligence_task(), self.customer_insights_task()])
 
     @task
     def business_analyst_task(self) -> Task:
         return Task(
             config=self.tasks_config["business_analyst_task"],
-            context=[self.competitive_intelligence_task(), self.customer_insights_task(), self.product_strategy_task()],
+            context=[self.fact_check_task()],
             output_file="reports/report.md"
         )
 
@@ -119,19 +124,19 @@ class MarketResearchCrew():
         return Crew(
             agents=[
                 self.market_research_specialist(),
-                self.fact_checker(),
                 self.competitive_intelligence_analyst(),
                 self.customer_insights_researcher(),
                 self.product_strategy_advisor(),
+                self.fact_checker(),
                 self.business_analyst(),
                 self.hallucination_guard()
             ],
             tasks=[
                 self.market_research_task(),
-                self.fact_check_task(),
                 self.competitive_intelligence_task(),
                 self.customer_insights_task(),
                 self.product_strategy_task(),
+                self.fact_check_task(),
                 self.business_analyst_task(),
                 self.hallucination_guard_task()
             ],

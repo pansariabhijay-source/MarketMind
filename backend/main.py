@@ -24,7 +24,7 @@ app = FastAPI(title="MarketMind API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,10 +34,10 @@ jobs: dict = {}
 
 AGENT_STEPS = [
     {"id": 0, "label": "Market Research Specialist",       "icon": "🔍"},
-    {"id": 1, "label": "Fact Verification Specialist",     "icon": "✅"},
-    {"id": 2, "label": "Competitive Intelligence Analyst", "icon": "🏆"},
-    {"id": 3, "label": "Customer Insights Researcher",     "icon": "👥"},
-    {"id": 4, "label": "Product Strategy Advisor",         "icon": "🗺️"},
+    {"id": 1, "label": "Competitive Intelligence Analyst", "icon": "🏆"},
+    {"id": 2, "label": "Customer Insights Researcher",     "icon": "👥"},
+    {"id": 3, "label": "Product Strategy Advisor",         "icon": "🗺️"},
+    {"id": 4, "label": "Fact Verification Specialist",     "icon": "✅"},
     {"id": 5, "label": "Business Analyst & Synthesizer",   "icon": "📊"},
     {"id": 6, "label": "Hallucination Guard",              "icon": "🛡️"},
 ]
@@ -174,13 +174,19 @@ def run_crew_in_thread(job_id: str, product_idea: str):
         # ── Read main report ──
         report = None
         try:
-            with open("reports/report.md", "r") as f:
+            with open("reports/report.md", "r", encoding="utf-8") as f:
                 report = f.read()
         except Exception:
             report = getattr(result, "raw", str(result))
 
-        # ── Generate hallucination report programmatically ──
-        hallucination_report = generate_hallucination_report(report)
+        # ── Read real hallucination report from crew agent ──
+        hallucination_report = None
+        try:
+            with open("reports/hallucination_report.md", "r", encoding="utf-8") as f:
+                hallucination_report = f.read()
+        except Exception:
+            # Fall back to programmatic generation if agent file missing
+            hallucination_report = generate_hallucination_report(report)
 
         jobs[job_id]["report"] = report
         jobs[job_id]["hallucination_report"] = hallucination_report
