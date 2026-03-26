@@ -304,8 +304,20 @@ def health():
         "vectordb": stats
     }
 
-
 import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+LANDING_DIR = Path(__file__).resolve().parent.parent / "landing"
+
+if LANDING_DIR.exists():
+    @app.get("/")
+    def serve_landing():
+        return FileResponse(LANDING_DIR / "index.html")
+
+    app.mount("/", StaticFiles(directory=str(LANDING_DIR)), name="landing")
+
 
 if __name__ == "__main__":
     import uvicorn

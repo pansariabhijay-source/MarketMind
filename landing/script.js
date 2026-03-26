@@ -2,7 +2,9 @@
    MarketMind Experience — Full SPA with Backend Integration
    ═══════════════════════════════════════════════════════════════════════ */
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:10000/api'
+  : `${window.location.origin}/api`;
 
 class MarketMindExperience {
   constructor() {
@@ -161,7 +163,7 @@ class MarketMindExperience {
         this.startPolling(job.job_id);
       }
     } catch (e) {
-      errorEl.textContent = 'Failed to connect to backend. Is the server running on port 8000?';
+      errorEl.textContent = 'Failed to connect to backend. Is the server running on port 10000?';
       errorEl.style.display = 'block';
     } finally {
       runBtn.disabled = false;
