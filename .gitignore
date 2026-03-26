@@ -3,5 +3,5 @@ backend/venv/
 __pycache__/
 .env
 node_modules/
-chromadb/
+backend/chroma_db/
 *.sqlite3
