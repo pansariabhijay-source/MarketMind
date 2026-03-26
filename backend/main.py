@@ -132,6 +132,22 @@ def generate_hallucination_report(report: str) -> str:
 
 
 def run_crew_in_thread(job_id: str, product_idea: str):
+    from backend.vector_store import search_similar_report
+    cached = search_similar_report(product_idea)
+    if cached:
+        print(f"[Cache HIT] Similarity: {cached['similarity']} — returning cached report")
+        jobs[job_id].update({
+            "status":               "completed",
+            "completed_at":         datetime.utcnow().isoformat(),
+            "current_step":         6,
+            "report":               cached["report"],
+            "hallucination_report": cached["hallucination_report"],
+            "from_cache":           True,
+            "cache_similarity":     cached["similarity"],
+            "original_idea":        cached["original_idea"],
+        })
+        return
+
     jobs[job_id]["status"] = "running"
     jobs[job_id]["current_step"] = 0
 
@@ -202,27 +218,6 @@ def start_run(req: RunRequest):
         raise HTTPException(status_code=400, detail="product_idea cannot be empty")
 
     product_idea = req.product_idea.strip()
-
-    from backend.vector_store import search_similar_report
-    cached = search_similar_report(product_idea)
-    if cached:
-        print(f"[Cache HIT] Similarity: {cached['similarity']} — returning cached report")
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = {
-            "job_id":               job_id,
-            "status":               "completed",
-            "product_idea":         product_idea,
-            "created_at":           datetime.utcnow().isoformat(),
-            "completed_at":         datetime.utcnow().isoformat(),
-            "current_step":         6,
-            "report":               cached["report"],
-            "hallucination_report": cached["hallucination_report"],
-            "error":                None,
-            "from_cache":           True,
-            "cache_similarity":     cached["similarity"],
-            "original_idea":        cached["original_idea"],
-        }
-        return jobs[job_id]
 
     job_id = str(uuid.uuid4())
     jobs[job_id] = {
