@@ -1,6 +1,7 @@
 # MarketMind - AI Market Research Crew
 
 **Live Demo:** [https://marketmind-9q4w.onrender.com/](https://marketmind-9q4w.onrender.com/)
+
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
 ![React](https://img.shields.io/badge/React-Frontend-blue)
