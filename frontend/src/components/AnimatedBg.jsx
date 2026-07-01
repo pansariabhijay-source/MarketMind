@@ -48,8 +48,8 @@ export default function AnimatedBg() {
 
       // Background — deep navy, not pure black
       const grad = ctx.createRadialGradient(W*0.35, H*0.35, 0, W*0.35, H*0.35, W*0.8)
-      grad.addColorStop(0, '#161924')
-      grad.addColorStop(1, '#0F1117')
+      grad.addColorStop(0, '#101319')
+      grad.addColorStop(1, '#08090D')
       ctx.fillStyle = grad
       ctx.fillRect(0, 0, W, H)
 

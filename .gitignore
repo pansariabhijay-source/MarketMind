@@ -1,7 +1,15 @@
 venv/
+.venv/
 backend/venv/
 __pycache__/
 .env
 node_modules/
 backend/chroma_db/
 *.sqlite3
+*.db
+/reports/
+reports/*.db
+reports/lightweight_store.json
+reports/marketmind.db
+# NOTE: frontend/dist IS committed so the Python-only Render service can serve
+# the built app at /app without a Node build step. Run `npm run build` and commit.

@@ -1,18 +1,38 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import uuid
+"""
+MarketMind API
+==============
+FastAPI service that orchestrates the CrewAI research pipeline, tracks REAL
+progress via task callbacks, persists jobs to SQLite, and synthesises a typed
+analysis for the dashboard.
+
+Endpoints
+  POST   /api/run               start a run
+  GET    /api/status/{job_id}   poll status + report + structured analysis
+  GET    /api/history           recent runs
+  DELETE /api/history           clear history
+  GET    /api/agents            pipeline definition
+  GET    /api/vectordb/*        cache inspection
+  GET    /health                health + db stats
+"""
+
+from __future__ import annotations
+
 import os
 import re
-import time
 import threading
-from datetime import datetime
-from typing import Optional
+import uuid
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend import store
+from backend.schemas import RunRequest, JobStatus, MarketAnalysis
 
 os.makedirs("reports", exist_ok=True)
+store.init_db()
 
-app = FastAPI(title="MarketMind API", version="2.0.0")
-
+app = FastAPI(title="MarketMind API", version="3.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,244 +41,171 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-jobs: dict = {}
-
+# ── Pipeline definition (order matches crew task order) ────────────────────────
 AGENT_STEPS = [
-    {"id": 0, "label": "Market Research Specialist",       "icon": "🔍"},
-    {"id": 1, "label": "Competitive Intelligence Analyst", "icon": "🏆"},
-    {"id": 2, "label": "Customer Insights Researcher",     "icon": "👥"},
-    {"id": 3, "label": "Product Strategy Advisor",         "icon": "🗺️"},
-    {"id": 4, "label": "Fact Verification Specialist",     "icon": "✅"},
-    {"id": 5, "label": "Business Analyst & Synthesizer",   "icon": "📊"},
-    {"id": 6, "label": "Hallucination Guard",              "icon": "🛡️"},
+    {"id": 0, "key": "market",      "label": "Market Research",          "desc": "Sizing TAM · SAM · SOM",       "icon": "🔍"},
+    {"id": 1, "key": "competitive", "label": "Competitive Intelligence", "desc": "Mapping the field",            "icon": "🏆"},
+    {"id": 2, "key": "customer",    "label": "Customer Insights",        "desc": "Segments · WTP · triggers",    "icon": "👥"},
+    {"id": 3, "key": "strategy",    "label": "Product Strategy",         "desc": "MVP · pricing · GTM",          "icon": "🗺️"},
+    {"id": 4, "key": "factcheck",   "label": "Fact Verification",        "desc": "Sourcing every claim",         "icon": "✅"},
+    {"id": 5, "key": "synthesis",   "label": "Business Synthesis",       "desc": "Scoring the opportunity",      "icon": "📊"},
+    {"id": 6, "key": "audit",       "label": "Reliability Audit",        "desc": "Cross-verifying outputs",      "icon": "🛡️"},
+    {"id": 7, "key": "structuring", "label": "Structuring Insights",     "desc": "Building the dashboard",       "icon": "✨"},
 ]
+TOTAL_STEPS = len(AGENT_STEPS)
+
+# Serialise crew runs: the pipeline is heavy and the progress callback is process
+# global, so we run one analysis at a time (matches free-tier capacity anyway).
+_crew_lock = threading.Lock()
 
 
-class RunRequest(BaseModel):
-    product_idea: str
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-class JobStatus(BaseModel):
-    job_id:               str
-    status:               str
-    product_idea:         str
-    created_at:           str
-    completed_at:         Optional[str] = None
-    current_step:         Optional[int] = None
-    report:               Optional[str] = None
-    hallucination_report: Optional[str] = None
-    error:                Optional[str] = None
-    from_cache:           Optional[bool] = False
-    cache_similarity:     Optional[float] = None
-    original_idea:        Optional[str] = None
+def _clean_agent_text(text: str | None) -> str | None:
+    """Strip CrewAI scaffolding the model sometimes leaks into output files."""
+    if not text:
+        return text
+    text = re.sub(r"^\s*(I now can give a great answer\.?|Thought:.*|Final Answer:?|"
+                  r"\*\*Final Answer\*\*:?)\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
+    return text.strip()
 
 
-def generate_hallucination_report(report: str) -> str:
-    """
-    Programmatically generate a hallucination report from the main report.
-    Counts UNVERIFIED mentions, calculates reliability score, builds markdown.
-    """
-    if not report:
-        return None
-
-    sentences = [s.strip() for s in re.split(r'[.!?]', report) if len(s.strip()) > 20]
-    total_claims = max(len(sentences), 10)
-    unverified_count = len(re.findall(r'UNVERIFIED', report, re.IGNORECASE))
-    verified_count = total_claims - unverified_count
-    unverified_rate = round((unverified_count / total_claims) * 100) if total_claims > 0 else 0
-    reliability = max(0, 100 - (unverified_rate * 2))
-
-    if unverified_rate <= 15:
-        risk_score = "LOW"
-    elif unverified_rate <= 35:
-        risk_score = "MEDIUM"
-    else:
-        risk_score = "HIGH"
-
-    section_claims = {
-        "Market Research":   max(3, total_claims // 7),
-        "Fact Checker":      max(2, total_claims // 8),
-        "Competitive Intel": max(3, total_claims // 6),
-        "Customer Insights": max(3, total_claims // 6),
-        "Product Strategy":  max(2, total_claims // 7),
-        "Business Analyst":  max(4, total_claims // 5),
-    }
-    unverified_per_agent = max(0, unverified_count // 6)
-
-    def agent_score(claims, unverified):
-        if claims == 0:
-            return "8/10"
-        ratio = unverified / claims
-        if ratio <= 0.1:  return "9/10"
-        elif ratio <= 0.2: return "8/10"
-        elif ratio <= 0.3: return "7/10"
-        else:              return "6/10"
-
-    return f"""## Hallucination Risk Score: {risk_score}
-
-## Error Metrics
-
-| Metric | Value |
-|--------|-------|
-| Total Claims Analyzed | {total_claims} |
-| Verified Claims | {verified_count} |
-| Unverified Claims | {unverified_count} |
-| Unverified Claim Rate | {unverified_rate}% |
-| Contradictions Detected | 0 |
-| Overall Reliability Score | {reliability}/100 |
-
-## Agent Reliability Scores
-
-| Agent | Claims | Verified | Unverified | Score |
-|-------|--------|----------|------------|-------|
-| Market Research | {section_claims["Market Research"]} | {section_claims["Market Research"] - unverified_per_agent} | {unverified_per_agent} | {agent_score(section_claims["Market Research"], unverified_per_agent)} |
-| Fact Checker | {section_claims["Fact Checker"]} | {section_claims["Fact Checker"]} | 0 | 10/10 |
-| Competitive Intel | {section_claims["Competitive Intel"]} | {section_claims["Competitive Intel"] - unverified_per_agent} | {unverified_per_agent} | {agent_score(section_claims["Competitive Intel"], unverified_per_agent)} |
-| Customer Insights | {section_claims["Customer Insights"]} | {section_claims["Customer Insights"] - unverified_per_agent} | {unverified_per_agent} | {agent_score(section_claims["Customer Insights"], unverified_per_agent)} |
-| Product Strategy | {section_claims["Product Strategy"]} | {section_claims["Product Strategy"]} | 0 | 9/10 |
-| Business Analyst | {section_claims["Business Analyst"]} | {section_claims["Business Analyst"] - unverified_per_agent} | {unverified_per_agent} | {agent_score(section_claims["Business Analyst"], unverified_per_agent)} |
-
-## Key Contradictions
-{"None detected." if unverified_count == 0 else "Review UNVERIFIED claims in the full report before acting on this research."}
-
-## Recommendation Validity
-{"YES — The recommendation is supported by the majority of verified research findings." if risk_score in ["LOW", "MEDIUM"] else "CONDITIONAL — Several unverified claims weaken the recommendation. Treat with caution."}
-
-## Key Caveats
-- {unverified_count} claim(s) in this report are marked UNVERIFIED and should be independently confirmed before making business decisions.
-- Market size figures are based on third-party research reports and may vary across sources.
-- Competitive landscape data reflects publicly available information and may not capture recent changes.
-"""
-
+# ── Background worker ──────────────────────────────────────────────────────────
 
 def run_crew_in_thread(job_id: str, product_idea: str):
     from backend.vector_store import search_similar_report
+
+    # 1) Cache check
     cached = search_similar_report(product_idea)
     if cached:
-        print(f"[Cache HIT] Similarity: {cached['similarity']} — returning cached report")
-        jobs[job_id].update({
-            "status":               "completed",
-            "completed_at":         datetime.utcnow().isoformat(),
-            "current_step":         6,
-            "report":               cached["report"],
-            "hallucination_report": cached["hallucination_report"],
-            "from_cache":           True,
-            "cache_similarity":     cached["similarity"],
-            "original_idea":        cached["original_idea"],
-        })
+        print(f"[cache HIT] {cached['similarity']} — returning cached analysis")
+        store.update_job(
+            job_id,
+            status="completed", completed_at=_now(), current_step=TOTAL_STEPS - 1,
+            step_label="Done (cached)", progress_pct=100,
+            report=cached["report"], hallucination_report=cached["hallucination_report"],
+            analysis=cached.get("analysis"),
+            from_cache=True, cache_similarity=cached["similarity"],
+            original_idea=cached["original_idea"],
+        )
         return
 
-    jobs[job_id]["status"] = "running"
-    jobs[job_id]["current_step"] = 0
+    started = datetime.now(timezone.utc)
+    store.update_job(job_id, status="running", current_step=0,
+                     step_label=AGENT_STEPS[0]["label"], progress_pct=2)
 
-    try:
-        stop_event = threading.Event()
-
-        def step_advancer():
-            for i in range(len(AGENT_STEPS)):
-                if stop_event.is_set():
-                    break
-                jobs[job_id]["current_step"] = i
-                time.sleep(8)
-
-        timer = threading.Thread(target=step_advancer, daemon=True)
-        timer.start()
-
-        from backend.vector_store import get_relevant_context
-        from backend.crew import MarketResearchCrew
-
-        context = get_relevant_context(product_idea)
-        enriched_idea = product_idea
-        if context:
-            enriched_idea = f"{product_idea}\n\n[Relevant past research:\n{context[:1000]}]"
-
-        result = MarketResearchCrew().crew().kickoff(
-            inputs={"product_idea": enriched_idea}
-        )
-
-        stop_event.set()
-        jobs[job_id]["current_step"] = len(AGENT_STEPS) - 1
-        jobs[job_id]["status"] = "completed"
-        jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
-
-        # ── Read main report ──
-        report = None
+    with _crew_lock:
         try:
-            with open("reports/report.md", "r", encoding="utf-8") as f:
-                report = f.read()
-        except Exception:
-            report = getattr(result, "raw", str(result))
+            from backend.crew import MarketResearchCrew, set_progress_callback
+            from backend.vector_store import get_relevant_context
 
-        # ── Read real hallucination report from crew agent ──
-        hallucination_report = None
-        try:
-            with open("reports/hallucination_report.md", "r", encoding="utf-8") as f:
-                hallucination_report = f.read()
-        except Exception:
-            # Fall back to programmatic generation if agent file missing
-            hallucination_report = generate_hallucination_report(report)
+            # Real progress: advance the step each time a crew task completes.
+            completed = {"n": 0}
 
-        jobs[job_id]["report"] = report
-        jobs[job_id]["hallucination_report"] = hallucination_report
+            def on_task(_task_output):
+                completed["n"] += 1
+                step = min(completed["n"], TOTAL_STEPS - 1)
+                pct = round(step / TOTAL_STEPS * 100)
+                label = AGENT_STEPS[step]["label"] if step < TOTAL_STEPS else "Finalising"
+                store.update_job(job_id, current_step=step, step_label=label,
+                                 progress_pct=pct,
+                                 elapsed_seconds=(datetime.now(timezone.utc) - started).total_seconds())
 
-        if report:
-            from backend.vector_store import store_report, store_agent_knowledge
-            store_report(job_id, product_idea, report, hallucination_report)
-            store_agent_knowledge(product_idea, "full_report", report[:2000])
+            set_progress_callback(on_task)
 
-    except Exception as e:
-        jobs[job_id]["status"] = "failed"
-        jobs[job_id]["error"] = str(e)
-        jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+            context = get_relevant_context(product_idea)
+            enriched = product_idea
+            if context:
+                enriched = f"{product_idea}\n\n[Relevant past research:\n{context[:1000]}]"
 
+            result = MarketResearchCrew().crew().kickoff(inputs={"product_idea": enriched})
+            set_progress_callback(None)
+
+            # 2) Collect outputs
+            report = None
+            try:
+                with open("reports/report.md", "r", encoding="utf-8") as f:
+                    report = f.read()
+            except Exception:
+                report = getattr(result, "raw", str(result))
+            report = _clean_agent_text(report)
+
+            audit = None
+            try:
+                with open("reports/hallucination_report.md", "r", encoding="utf-8") as f:
+                    audit = f.read()
+            except Exception:
+                audit = ""
+            audit = _clean_agent_text(audit)
+
+            # 3) Structured synthesis (step 7)
+            store.update_job(job_id, current_step=TOTAL_STEPS - 1,
+                             step_label=AGENT_STEPS[-1]["label"], progress_pct=92)
+            from backend.synthesize import synthesize
+            analysis = synthesize(product_idea, report or "", audit or "", use_llm=True)
+
+            store.update_job(
+                job_id, status="completed", completed_at=_now(),
+                current_step=TOTAL_STEPS - 1, step_label="Complete", progress_pct=100,
+                report=report, hallucination_report=audit,
+                analysis=analysis.model_dump(),
+                elapsed_seconds=(datetime.now(timezone.utc) - started).total_seconds(),
+            )
+
+            # 4) Persist to cache
+            if report:
+                from backend.vector_store import store_report, store_agent_knowledge
+                store_report(job_id, product_idea, report, audit, analysis.model_dump())
+                store_agent_knowledge(product_idea, "full_report", report[:2000])
+
+        except Exception as e:  # noqa: BLE001
+            import traceback; traceback.print_exc()
+            set_progress_callback(None) if "set_progress_callback" in dir() else None
+            store.update_job(job_id, status="failed", error=str(e), completed_at=_now())
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.post("/api/run", response_model=JobStatus)
 def start_run(req: RunRequest):
-    if not req.product_idea.strip():
+    idea = (req.product_idea or "").strip()
+    if not idea:
         raise HTTPException(status_code=400, detail="product_idea cannot be empty")
-
-    product_idea = req.product_idea.strip()
+    if len(idea) < 8:
+        raise HTTPException(status_code=400, detail="Describe the idea in a bit more detail")
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "job_id":               job_id,
-        "status":               "pending",
-        "product_idea":         product_idea,
-        "created_at":           datetime.utcnow().isoformat(),
-        "completed_at":         None,
-        "current_step":         None,
-        "report":               None,
-        "hallucination_report": None,
-        "error":                None,
-        "from_cache":           False,
-        "cache_similarity":     None,
-        "original_idea":        None,
+    job = {
+        "job_id": job_id, "status": "pending", "product_idea": idea,
+        "created_at": _now(), "completed_at": None, "current_step": None,
+        "step_label": "Queued", "progress_pct": 0, "report": None,
+        "hallucination_report": None, "analysis": None, "error": None,
+        "from_cache": False, "cache_similarity": None, "original_idea": None,
+        "elapsed_seconds": 0,
     }
-
-    thread = threading.Thread(
-        target=run_crew_in_thread,
-        args=(job_id, product_idea),
-        daemon=True
-    )
-    thread.start()
-    return jobs[job_id]
+    store.save_job(job)
+    threading.Thread(target=run_crew_in_thread, args=(job_id, idea), daemon=True).start()
+    return job
 
 
 @app.get("/api/status/{job_id}", response_model=JobStatus)
 def get_status(job_id: str):
-    if job_id not in jobs:
+    job = store.get_job(job_id)
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return jobs[job_id]
+    return job
 
 
 @app.get("/api/history")
 def get_history():
-    return list(reversed(list(jobs.values())))
+    return store.list_jobs(limit=100)
 
 
 @app.delete("/api/history")
 def clear_history():
-    jobs.clear()
+    store.clear_jobs()
     return {"message": "History cleared"}
 
 
@@ -281,37 +228,42 @@ def vectordb_ideas():
 
 @app.delete("/api/vectordb/clear")
 def vectordb_clear():
-    import shutil
-    try:
-        shutil.rmtree("./chroma_db", ignore_errors=True)
-        return {"message": "Vector store cleared"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    from backend.vector_store import clear_store
+    clear_store()
+    return {"message": "Vector store cleared"}
 
 
 @app.get("/health")
 def health():
     from backend.vector_store import get_stats
-    stats = get_stats()
     return {
         "status": "ok",
-        "timestamp": datetime.utcnow().isoformat(),
-        "vectordb": stats
+        "timestamp": _now(),
+        "jobs": store.count_jobs(),
+        "vectordb": get_stats(),
     }
 
-import os
+
+# ── Static frontend ────────────────────────────────────────────────────────────
+# The React app (frontend/dist) is THE product surface, served at the root.
+# The legacy vanilla `landing/` folder is kept in the repo for reference but is
+# no longer served. Build with `npm run build` in frontend/ and commit dist/.
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
-LANDING_DIR = Path(__file__).resolve().parent.parent / "landing"
+ROOT = Path(__file__).resolve().parent.parent
+APP_DIR = ROOT / "frontend" / "dist"
+LANDING_DIR = ROOT / "landing"
 
-if LANDING_DIR.exists():
-    @app.get("/")
-    def serve_landing():
-        return FileResponse(LANDING_DIR / "index.html")
-
-    app.mount("/", StaticFiles(directory=str(LANDING_DIR)), name="landing")
+if APP_DIR.exists():
+    # Legacy marketing page still reachable at /landing for reference.
+    if LANDING_DIR.exists():
+        app.mount("/landing", StaticFiles(directory=str(LANDING_DIR), html=True), name="landing")
+    # SPA at root (must be mounted LAST so /api/* keeps priority).
+    app.mount("/", StaticFiles(directory=str(APP_DIR), html=True), name="app")
+elif LANDING_DIR.exists():
+    # Fallback: no built React app -> serve the legacy landing at root.
+    app.mount("/", StaticFiles(directory=str(LANDING_DIR), html=True), name="landing")
 
 
 if __name__ == "__main__":

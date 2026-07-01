@@ -1,110 +1,141 @@
 market_research_task:
   description: >
-    Research this idea: {product_idea}.
-    Do NOT assume it is AI/tech. Research the exact industry described.
-    Find: market size, top 2 growth trends, key industry dynamics, major players.
-    Use web search. Cite every stat with source name.
+    Research and size this idea: {product_idea}.
+    Do NOT assume it is AI/tech — research the exact industry described.
+    Use web search and cite every number with its source name.
+    Deliver: TAM (top-down), SAM, SOM (3-yr realistic capture), forward CAGR,
+    the two strongest growth trends, the key structural dynamic, and the major players.
   expected_output: >
-    - Market size: [figure] (Source: X)
-    - CAGR: [figure] (Source: X)
-    - Growth trend 1: [stat] (Source: X)
-    - Growth trend 2: [stat] (Source: X)
-    - Key dynamic: [insight]
+    - TAM: [figure] — [one-line top-down methodology] (Source: X)
+    - SAM: [figure] — [why this slice] (Source/Estimate)
+    - SOM (3-yr): [figure] — [capture assumption] (Estimate)
+    - CAGR: [figure]% (Source: X)
+    - Growth trend 1: [stat + why it matters] (Source: X)
+    - Growth trend 2: [stat + why it matters] (Source: X)
+    - Key dynamic: [structural insight]
     - Major players: [list]
-    Mark any unsourced stat as UNVERIFIED.
+    Mark any unsourced number as UNVERIFIED.
   agent: market_research_specialist
-
-
-fact_check_task:
-  description: >
-    Review the combined outputs from Market Research, Competitive Intelligence, Customer Insights, and Product Strategy.
-    Mark any stat, metric, or claim without a named source as UNVERIFIED.
-    Remove clearly fabricated data. Keep all verified facts intact.
-  expected_output: >
-    The same insights and bullet points from all four previous agents, cleaned. Mark bad claims as UNVERIFIED. Keep all details.
-  agent: fact_checker
 
 
 competitive_intelligence_task:
   description: >
-    Find competitors for: {product_idea}.
-    Research the exact industry. Find 4 real direct competitors.
+    Map competitors for: {product_idea}. Research the EXACT industry.
+    Find 4-5 real direct competitors with pricing and known funding/scale.
+    Rate each on market presence (0-100) and product innovation (0-100).
   expected_output: >
-    - Competitor 1: [name] — [offering] — [pricing] — [strength] — [weakness]
-    - Competitor 2: [name] — [offering] — [pricing] — [strength] — [weakness]
-    - Competitor 3: [name] — [offering] — [pricing] — [strength] — [weakness]
-    - Competitor 4: [name] — [offering] — [pricing] — [strength] — [weakness]
-    - Key market gap: [insight]
+    For each of 4-5 competitors:
+    - Name | Offering | Pricing | Funding/Scale | Strength | Weakness | Presence(0-100) | Innovation(0-100)
+    Then:
+    - Key market gap: [the single clearest opening, 1-2 sentences]
+    Mark any unconfirmed company, price or funding figure as UNVERIFIED.
   agent: competitive_intelligence_analyst
 
 
 customer_insights_task:
   description: >
-    Identify customers for: {product_idea}.
-    Do NOT assume it is AI/tech. Find 2 customer segments with pain points.
+    Identify the buyers for: {product_idea}. Do NOT assume AI/tech buyers.
+    Give 2-3 segments grounded in real behaviour.
   expected_output: >
-    - Segment 1: [who] — Pain: [points] — WTP: [amount] — Trigger: [trigger]
-    - Segment 2: [who] — Pain: [points] — WTP: [amount] — Trigger: [trigger]
-    - ICP: [1 sentence summary]
+    For each segment (2-3):
+    - Segment: [who] — Size: [rough count/value] — Pain: [sharpest pain] —
+      WTP: [number or range] — Trigger: [what makes them buy now] — Priority: [primary/secondary]
+    Then:
+    - ICP: [one-sentence ideal customer profile]
+    Flag weak inference as ASSUMPTION.
   agent: customer_insights_researcher
 
 
 product_strategy_task:
   description: >
-    Build a strategy for: {product_idea}.
-    Do NOT add AI features unless the idea includes them.
-    Use prior research only. Be specific and actionable.
+    Build the strategy for: {product_idea}, using only prior research.
+    Do NOT add AI features unless the idea includes them. Be specific and numeric.
   expected_output: >
     - Core offering: [what it is]
-    - Key differentiators: [3 points vs competitors]
-    - MVP features: [5 specific features]
-    - Pricing: [tiers and price points]
-    - GTM: [channels and approach]
-    - 6-month goal: [specific measurable goal]
-    - 12-month goal: [specific measurable goal]
+    - Differentiators: [3 points, each vs a named competitor]
+    - MVP features: [5 concrete features]
+    - Pricing tiers: [2-3 tiers, each with name, price, target, key features]
+    - Go-to-market: [3 phases — phase, focus, channels, measurable goal]
+    - Financial outline: [Year 1 / Year 2 / Year 3 — customers, revenue, cost]
+    Keep every number consistent with the market sizing and WTP found earlier.
   agent: product_strategy_advisor
+
+
+fact_check_task:
+  description: >
+    Review the combined outputs from Market Research, Competitive Intelligence,
+    Customer Insights and Product Strategy for {product_idea}.
+    Mark any stat, price or funding figure without a named source as UNVERIFIED.
+    Remove clearly fabricated data; keep all genuinely sourced detail intact.
+  expected_output: >
+    The same structured insight from all four agents, cleaned — bad claims marked
+    UNVERIFIED, fabrications removed, all real detail and numbers preserved.
+  agent: fact_checker
 
 
 business_analyst_task:
   description: >
-    Write a concise but complete market research report for: {product_idea}.
-    Use ONLY verified research from previous agents.
-    Write in clean professional markdown. Be concise — every section max 3-4 sentences or a short table.
-    Do NOT repeat information across sections.
+    Write a decision-grade market report for: {product_idea}, using ONLY verified
+    upstream insight. Clean professional markdown. Fill every table. No placeholders.
+    Give a numeric opportunity score and an explicit verdict.
   expected_output: >
     # {product_idea} — Market Research Report
 
     ## Executive Summary
-    2-3 sentences: opportunity, market size, recommendation.
+    3-4 sentences: the opportunity, the market size, the verdict and why.
+
+    ## Opportunity Score
+    Overall: [0-100]. Verdict: [GO / CONDITIONAL / NO-GO]. One-line rationale.
+    Sub-scores (0-100 each): Market Attractiveness, Competitive Intensity,
+    Customer Urgency, Differentiation, Execution Feasibility.
 
     ## Market Overview
-    Market size, CAGR, 2 key trends. Cite sources. Max 4 sentences.
+    | Metric | Value | Methodology / Source |
+    |--------|-------|----------------------|
+    | TAM | $X | ... |
+    | SAM | $X | ... |
+    | SOM (3-yr) | $X | ... |
+    | CAGR | X% | Source |
+    Then 2 sentences on the two key trends.
 
     ## Competitive Landscape
-    | Competitor | Offering | Pricing | Strength | Weakness |
-    |------------|----------|---------|----------|----------|
-    | Name | Details | Price | Point | Point |
-    (4 rows max)
+    | Competitor | Offering | Pricing | Funding | Strength | Weakness |
+    |------------|----------|---------|---------|----------|----------|
+    | ... | ... | ... | ... | ... | ... |
+    (4-5 rows). Then one line: **Market gap:** ...
 
     ## Customer Insights
-    2 segments. For each: who they are, top pain point, willingness to pay.
+    For each of 2-3 segments: name, size, top pain, willingness to pay, buying trigger.
+    Then **ICP:** one sentence.
 
     ## Product Strategy
-    Core offering, top 3 differentiators, 5 MVP features, pricing tiers.
+    Core offering; 3 differentiators; 5 MVP features; pricing tiers (table: Tier | Price | Target).
 
-    ## Business Model
-    Revenue model, 2-3 key risks.
+    ## Financial Projection
+    | Period | Customers | Revenue | Cost |
+    |--------|-----------|---------|------|
+    | Year 1 | ... | $... | $... |
+    | Year 2 | ... | $... | $... |
+    | Year 3 | ... | $... | $... |
+
+    ## Go-To-Market
+    3 phases — each: phase window, focus, channels, measurable goal.
+
+    ## SWOT
+    Strengths / Weaknesses / Opportunities / Threats — 2-3 bullets each.
+
+    ## Key Risks
+    3-4 risks, each with severity (low/medium/high) and a one-line mitigation.
 
     ## Final Recommendation
-    Go / No-Go / Conditional — 2 sentence reason.
-
+    GO / CONDITIONAL / NO-GO — 2-sentence justification tied to the score.
   agent: business_analyst
 
 
 hallucination_guard_task:
   description: >
-    Audit all agent outputs for: {product_idea}.
-    Count real claims. Calculate real metrics. No placeholders.
+    Audit all agent outputs for: {product_idea}. Count real claims, compute real
+    metrics, list genuine contradictions. No placeholders. Output ONLY the report.
   expected_output: >
     ## Hallucination Risk Score: [LOW / MEDIUM / HIGH]
 
@@ -118,13 +149,13 @@ hallucination_guard_task:
     | Overall Reliability Score | [n]/100 |
 
     ## Key Contradictions
-    None detected. OR list them.
+    None detected. OR a bulleted list of the real contradictions found.
 
     ## Recommendation Validity
-    YES/NO + 1 sentence.
+    YES / CONDITIONAL / NO + one sentence.
 
     ## Key Caveats
     - Caveat 1
     - Caveat 2
-
+    - Caveat 3
   agent: hallucination_guard

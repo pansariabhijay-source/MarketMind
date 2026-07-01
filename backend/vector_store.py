@@ -55,6 +55,7 @@ def search_similar_report(product_idea: str) -> Optional[dict]:
                 "original_idea":        best_match.get("product_idea"),
                 "report":               best_match.get("report"),
                 "hallucination_report": best_match.get("hallucination_report"),
+                "analysis":             best_match.get("analysis"),
                 "created_at":           best_match.get("created_at"),
                 "job_id":               best_match.get("job_id"),
             }
@@ -67,21 +68,33 @@ def store_report(
     job_id:               str,
     product_idea:         str,
     report:               str,
-    hallucination_report: Optional[str] = None
+    hallucination_report: Optional[str] = None,
+    analysis:             Optional[dict] = None,
 ):
     try:
         store = _load_store()
         store["reports"].append({
             "job_id":               job_id,
             "product_idea":         product_idea,
-            "report":               report[:5000],
-            "hallucination_report": (hallucination_report or "")[:3000],
+            "report":               report[:8000],
+            "hallucination_report": (hallucination_report or "")[:4000],
+            "analysis":             analysis,
             "created_at":           datetime.utcnow().isoformat(),
         })
+        # Keep the cache bounded so the JSON file stays small on the free tier.
+        store["reports"] = store["reports"][-50:]
         _save_store(store)
         print(f"[Store] Saved report for: {product_idea[:50]}")
     except Exception as e:
         print(f"[Store] Store error: {e}")
+
+
+def clear_store():
+    try:
+        _save_store({"reports": [], "knowledge": []})
+        print("[Store] Cleared")
+    except Exception as e:
+        print(f"[Store] Clear error: {e}")
 
 def store_agent_knowledge(
     product_idea: str,

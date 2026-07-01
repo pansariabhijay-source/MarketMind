@@ -1,178 +1,104 @@
-# MarketMind - AI Market Research Crew
+# MarketMind — Market Intelligence, Verified
 
-**Live Demo:** [https://marketmind-9q4w.onrender.com/](https://marketmind-9q4w.onrender.com/)
+An AI market-research platform. Drop a startup idea and a 7-agent CrewAI pipeline
+sizes the market, maps competitors, profiles customers, models the financials,
+and returns a **scored, decision-grade investment memo** — rendered as an
+interactive analyst dashboard, not a wall of text.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
 ![React](https://img.shields.io/badge/React-Frontend-blue)
 ![CrewAI](https://img.shields.io/badge/CrewAI-Multi--Agent-black)
-![Tailwind](https://img.shields.io/badge/TailwindCSS-UI-38B2AC)
-![Vite](https://img.shields.io/badge/Vite-Build-purple)
+![Cerebras](https://img.shields.io/badge/Cerebras-GLM--4.7-orange)
 
-An AI-powered market research platform that uses multiple autonomous agents to analyze startup ideas and generate structured market insights.
-
-The system combines CrewAI multi-agent orchestration , a FastAPI backend , and a React frontend to deliver interactive research reports.
-
-Users can enter a startup idea, and the platform coordinates multiple AI agents to perform:
-
-- Market research
-- Competitive analysis
-- Customer insights
-- Fact verification
-- Business strategy generation
 ---
-## Tech Stack
 
-### Frontend
-- React
-- Vite
-- TailwindCSS
+## What makes it more than a demo
 
-### Backend
-- FastAPI
-- Python
+| Area | What it does |
+|------|--------------|
+| **Structured insight** | The crew's markdown report is synthesised into a typed `MarketAnalysis` (TAM/SAM/SOM, competitor matrix, segments + WTP, 3-yr financials, SWOT, GTM, risk register, opportunity score). Robust LLM→heuristic fallback means the dashboard **always** renders. |
+| **Real progress** | Progress is driven by **CrewAI task callbacks**, not a fake timer — the UI shows the agent that is genuinely running. |
+| **Persistence** | Jobs live in **SQLite**, so analyses survive a server restart (Render dynos cycle often). |
+| **Stronger model** | Reasoning runs on **Cerebras `zai-glm-4.7`** (GLM-4.7) with `gemma-4-31b` for fast extraction — both free/fast — instead of an 8B model, with every model overridable by env var. |
+| **Analyst dashboard** | React + Recharts: opportunity gauge, score radar, TAM/SAM/SOM funnel, growth curve, competitor positioning scatter, financial projection chart, SWOT grid, GTM timeline, risk register, data-reliability audit. |
+| **Verified sourcing** | A fact-checker marks unsourced claims `UNVERIFIED`; a reliability agent produces a real 0–100 confidence score surfaced in the UI. |
+| **Shareable reports** | `/?job=<id>` deep-links restore any completed report. |
+| **Instant cache** | Near-duplicate ideas return a cached analysis via lightweight similarity (no heavy vector DB — free-tier friendly). |
 
-### AI / Agents
-- CrewAI (multi-agent orchestration)
+---
 
-### LLM Providers
-- Cerebras
-- Ollama
-
-### Vector Database
-- ChromaDB
-
-
-## System Architecture
-
-![MarketMind Pipeline](marketmind_pipeline.svg)
-
-The platform runs a **multi-agent research pipeline**:
-
-1. **Market Research Agent** – gathers industry insights  
-2. **Fact Checker Agent** – validates claims and removes hallucinations  
-3. **Competitive Intelligence Agent** – analyzes competitors  
-4. **Customer Insight Agent** – studies target users  
-5. **Product Strategy Agent** – suggests product positioning  
-6. **Business Analysis Agent** – generates the final market report
-
-## Project Structure
+## Architecture
 
 ```
-crewai-market-research/
-├── backend/
-│   ├── crew.py              # Your CrewAI crew (unchanged)
-│   ├── main.py              # FastAPI server
-│   ├── config/
-│   │   ├── agents.yaml      # Your agent configs
-│   │   └── tasks.yaml       # Your task configs
-│   ├── .env                 # API keys
-│   └── requirements.txt
-└── frontend/
-    ├── src/
-    │   ├── App.jsx           # Main app shell
-    │   ├── api.js            # Backend API calls
-    │   ├── hooks/useJob.js   # Job polling hook
-    │   └── components/
-    │       ├── AgentPipeline.jsx   # Live progress tracker
-    │       ├── ReportViewer.jsx    # Markdown report viewer
-    │       └── HistoryPanel.jsx    # Past runs sidebar
-    ├── index.html
-    ├── vite.config.js
-    └── tailwind.config.js
+Browser ── React SPA (frontend/dist, served at / )
+   │  POST /api/run                       ┌───────────── FastAPI (backend/main.py) ─────────────┐
+   │  GET  /api/status/{id}  ◀── polls ──▶│ SQLite job store (backend/store.py)                 │
+   │                                       │ background thread → CrewAI pipeline (backend/crew) │
+   │                                       │   7 agents, task callbacks → real progress          │
+   │                                       │ synthesis (backend/synthesize.py) → MarketAnalysis  │
+   │                                       │ cache (backend/vector_store.py, JSON similarity)    │
+   └───────────────────────────────────────┴─────────────────────────────────────────────────────┘
 ```
+
+**Pipeline:** Market Research → Competitive Intelligence → Customer Insights →
+Product Strategy → Fact Verification → Business Synthesis → Reliability Audit →
+(Structured Synthesis).
 
 ---
 
 ## Setup
 
-### 1. Backend
-
+### Backend
 ```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-
-# Install dependencies
+cd <project root>
+python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Add your API keys to .env
-# GROQ_API_KEY=...
-# SERPER_API_KEY=...
+# .env (in project root or backend/)
+CEREBRAS_API_KEY=...          # required — powers the agents
+SERPER_API_KEY=...            # optional — enables live web search
+# Optional model overrides:
+# MM_REASONING_MODEL=cerebras/zai-glm-4.7
+# MM_FAST_MODEL=cerebras/gemma-4-31b
 
-# Run the server
-uvicorn main:app --reload --port 8000
+# Run from the PROJECT ROOT (paths are root-relative):
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 10000
 ```
+API docs: `http://localhost:10000/docs`
 
-Backend runs at: http://localhost:8000  
-API docs at: http://localhost:8000/docs
-
----
-
-### 2. Frontend
-
+### Frontend
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
+npm run build        # outputs frontend/dist (committed & served by the backend at /)
+# or for hot-reload dev (proxies /api → :8000):
 npm run dev
 ```
 
-Frontend runs at: http://localhost:5173
+---
+
+## API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/run` | Start a run — `{ "product_idea": "..." }` |
+| GET | `/api/status/{job_id}` | Poll status, progress, report **and structured `analysis`** |
+| GET | `/api/history` | Recent runs |
+| DELETE | `/api/history` | Clear history |
+| GET | `/api/agents` | Pipeline definition |
+| GET | `/api/vectordb/stats` · `/ideas` · `DELETE /clear` | Cache inspection |
+| GET | `/health` | Health + job/cache counts |
+
+`GET /api/status/{id}` now returns `progress_pct`, `step_label`, `elapsed_seconds`
+and a full `analysis` object (the dashboard data) in addition to the markdown `report`.
 
 ---
 
-## API Endpoints
+## Deployment (Render free tier)
 
-| Method | Endpoint              | Description                        |
-|--------|-----------------------|------------------------------------|
-| POST   | /api/run              | Start a new research run           |
-| GET    | /api/status/{job_id}  | Poll job status + get report       |
-| GET    | /api/history          | List all past runs                 |
-| DELETE | /api/history          | Clear all history                  |
-| GET    | /api/agents           | Get list of agents in pipeline     |
-| GET    | /health               | Health check                       |
-
-### POST /api/run — Request Body
-```json
-{ "product_idea": "AI-powered legal document review for SMBs" }
-```
-
-### GET /api/status/{job_id} — Response
-```json
-{
-  "job_id": "uuid",
-  "status": "running | completed | failed | pending",
-  "product_idea": "...",
-  "current_step": 2,
-  "report": "# Market Research Report...",
-  "created_at": "2024-01-01T00:00:00",
-  "completed_at": "2024-01-01T00:05:00"
-}
-```
-
----
-
-## How It Works
-
-1. User enters a startup idea in the UI
-2. Frontend `POST /api/run` → backend creates a job ID and spawns a background thread
-3. CrewAI runs 6 agents sequentially (market research → fact check → competitive intel → customer insights → product strategy → business analysis)
-4. Frontend polls `GET /api/status/{job_id}` every 2 seconds
-5. Live agent pipeline UI updates as each step progresses
-6. On completion, the full markdown report is rendered with copy + download options
-
----
-
-## Production Deployment
-
-For production, consider:
-- **Backend**: Deploy on Railway, Render, or a VPS with `uvicorn main:app --host 0.0.0.0 --port 8000`
-- **Frontend**: `npm run build` → deploy `dist/` to Vercel or Netlify
-- **Persistence**: Replace in-memory `jobs` dict with SQLite or Redis
-- **Auth**: Add API key middleware to FastAPI if exposing publicly
+- Single **Python** service. Build the frontend (`npm run build`) and **commit
+  `frontend/dist`** so the service can serve it with no Node step.
+- Start command: `python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- Kept lightweight on purpose: SQLite + stdlib, JSON similarity cache (no
+  torch/chromadb), lazy imports — fits in 512 MB.

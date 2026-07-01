@@ -3,4 +3,3 @@ uvicorn[standard]
 crewai
 crewai-tools
 python-dotenv
-langchain-groq
