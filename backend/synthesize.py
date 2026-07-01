@@ -201,19 +201,167 @@ def _llm_synthesis(idea: str, report: str, audit: str) -> Optional[dict]:
         f"=== DATA RELIABILITY AUDIT ===\n{audit or 'N/A'}\n\n"
         f"{_SCHEMA_HINT}"
     )
-    for _ in range(2):
+    import time
+    for attempt in range(3):
         try:
             # The schema is large; give the model room so the JSON isn't truncated.
             raw = structured_complete(prompt, system=_SYNTHESIS_SYSTEM, max_tokens=8000)
             data = _extract_json(raw)
             if data:
                 return data
+            print(f"[synthesis] attempt {attempt+1}: unparseable JSON, retrying")
         except Exception as e:  # noqa: BLE001
-            print(f"[synthesis] LLM attempt failed: {e}")
+            print(f"[synthesis] attempt {attempt+1} failed: {e}")
+        time.sleep(2 * (attempt + 1))  # backoff for rate-limit (429) blips
     return None
 
 
 # ── Heuristic fallback ────────────────────────────────────────────────────────
+
+def _kv(text: str, *keys: str) -> str:
+    """Grab the value after a 'Key: value' bullet (markdown bold tolerated)."""
+    for k in keys:
+        m = re.search(rf"{k}\s*[:\-]\s*(.+)", text, re.IGNORECASE)
+        if m:
+            return re.sub(r"[*_`]", "", m.group(1)).strip()
+    return ""
+
+
+def _int(text: str) -> int:
+    digits = re.sub(r"[^\d]", "", text or "")
+    return int(digits) if digits else 0
+
+
+def _parse_financials_md(report: str) -> list:
+    md = _section(report, "Financial Projection", "Financials", "Financial Outline")
+    rows = _parse_md_table(md)
+    out = []
+    if len(rows) > 1:
+        header = [h.lower() for h in rows[0]]
+        def idx(*names, d=-1):
+            for n in names:
+                for i, h in enumerate(header):
+                    if n in h:
+                        return i
+            return d
+        pi = idx("period", "year", d=0)
+        ci = idx("customer", "location", "user", "client")
+        ri = idx("revenue", "sales", "income")
+        ki = idx("cost", "expense", "opex")
+        for r in rows[1:5]:
+            def cell(i):
+                return r[i] if 0 <= i < len(r) else ""
+            out.append({
+                "period": cell(pi) or f"Year {len(out)+1}",
+                "customers": _int(cell(ci)),
+                "revenue_usd": _money_to_usd(cell(ri)),
+                "costs_usd": _money_to_usd(cell(ki)),
+            })
+    return out
+
+
+def _parse_gtm_md(report: str) -> list:
+    md = _section(report, "Go-To-Market", "Go To Market", "GTM", "Go-to-Market Strategy")
+    if not md:
+        return []
+    blocks = re.split(r"(?=(?:[-*+]\s*)?\*{0,2}Phase\s*\d)", md, flags=re.IGNORECASE)
+    out = []
+    for b in blocks:
+        if not re.search(r"Phase\s*\d", b, re.IGNORECASE):
+            continue
+        phase = re.sub(r"[*#>_`-]", "", b.splitlines()[0]).strip().rstrip(":")[:70]
+        channels_raw = _kv(b, "Channels", "Channel")
+        channels = [c.strip() for c in re.split(r"[;,]|\band\b", channels_raw) if c.strip()][:4]
+        out.append({
+            "phase": phase,
+            "focus": _kv(b, "Focus", "Objective")[:220],
+            "channels": channels,
+            "goal": _kv(b, "Measurable Goal", "Goal", "KPI", "Target")[:180],
+        })
+    return out[:4]
+
+
+def _parse_swot_md(report: str) -> dict:
+    md = _section(report, "SWOT Analysis", "SWOT")
+    out = {"strengths": [], "weaknesses": [], "opportunities": [], "threats": []}
+    if not md:
+        return out
+    for field, label in (("strengths", "Strength"), ("weaknesses", "Weakness"),
+                         ("opportunities", "Opportunit"), ("threats", "Threat")):
+        m = re.search(
+            rf"\*{{0,2}}{label}\w*\*{{0,2}}\s*:?\s*(.*?)(?=\*{{0,2}}(?:Strength|Weakness|Opportunit|Threat)\w*\*{{0,2}}|\Z)",
+            md, re.IGNORECASE | re.DOTALL)
+        if m:
+            items = [re.sub(r"^[-*•\s]+", "", l).strip()
+                     for l in m.group(1).splitlines() if re.match(r"^\s*[-*•]", l)]
+            out[field] = [i for i in items if len(i) > 3][:4]
+    return out
+
+
+def _parse_pricing_md(report: str) -> list:
+    md = _section(report, "Pricing", "Product Strategy", "Strategy")
+    rows = _parse_md_table(md)
+    out = []
+    if len(rows) > 1:
+        header = [h.lower() for h in rows[0]]
+        if any(("price" in h or "tier" in h or "plan" in h) for h in header):
+            def idx(*names, d=-1):
+                for n in names:
+                    for i, h in enumerate(header):
+                        if n in h:
+                            return i
+                return d
+            ti, pi, gi = idx("tier", "plan", "name", d=0), idx("price", "cost"), idx("target", "for", "segment")
+            for r in rows[1:4]:
+                def cell(i):
+                    return r[i] if 0 <= i < len(r) else ""
+                if cell(pi):
+                    out.append({"name": cell(ti), "price": cell(pi),
+                                "target": cell(gi), "features": []})
+    return out
+
+
+def _parse_risks_md(report: str) -> list:
+    md = _section(report, "Key Risks", "Risk Register", "Risks", "Business Model")
+    out = []
+    rows = _parse_md_table(md)
+    if len(rows) > 1 and any("risk" in h.lower() for h in rows[0]):
+        header = [h.lower() for h in rows[0]]
+        def idx(*names, d=-1):
+            for n in names:
+                for i, h in enumerate(header):
+                    if n in h:
+                        return i
+            return d
+        ti, si, mi = idx("risk", "title", d=0), idx("severity", "impact"), idx("mitigation", "action")
+        for r in rows[1:6]:
+            def cell(i):
+                return r[i] if 0 <= i < len(r) else ""
+            sev = cell(si).lower()
+            sev = "high" if "high" in sev else "low" if "low" in sev else "medium"
+            out.append({"title": cell(ti), "severity": sev,
+                        "likelihood": "medium", "mitigation": cell(mi)})
+    else:
+        for l in md.splitlines():
+            if re.match(r"^\s*[-*•\d]", l) and len(l) > 15:
+                out.append({"title": re.sub(r"^[-*•\d.]+\s*", "", l).strip()[:140],
+                            "severity": "medium", "likelihood": "medium", "mitigation": ""})
+    return out[:5]
+
+
+def _clean_list(md: str, limit: int) -> list:
+    """Bullet/numbered list items, minus section-label artifacts like 'MVP features:'."""
+    items = []
+    for l in md.splitlines():
+        if not re.match(r"^\s*[-*•\d]", l):
+            continue
+        s = re.sub(r"^[-*•\d.]+\s*", "", l).strip()
+        # Drop a leading bold label like "**Core Offering:**" -> keep the value.
+        s = re.sub(r"^\*{0,2}[A-Z][\w /&-]{2,30}:\*{0,2}\s*", "", s).strip().strip("*_`").strip()
+        if len(s) > 12 and not s.rstrip().endswith(":"):
+            items.append(s)
+    return items[:limit]
+
 
 def _heuristic(idea: str, report: str, audit: str) -> dict:
     """Best-effort structured extraction straight from the markdown report.
@@ -313,27 +461,18 @@ def _heuristic(idea: str, report: str, audit: str) -> dict:
 
     # Strategy bits
     strat_md = _section(report, "Product Strategy", "Strategy")
-    diffs = _section(report, "Differentiators", "Key Differentiators") or strat_md
-    data["differentiators"] = [
-        re.sub(r"^[-*•\d.]+\s*", "", l).strip()
-        for l in diffs.splitlines()
-        if re.match(r"^\s*[-*•\d]", l) and len(l) > 12
-    ][:4]
-    feats = _section(report, "MVP Features", "Features") or strat_md
-    data["mvp_features"] = [
-        re.sub(r"^[-*•\d.]+\s*", "", l).strip()
-        for l in feats.splitlines()
-        if re.match(r"^\s*[-*•\d]", l) and len(l) > 12
-    ][:6]
+    diffs = _section(report, "Differentiators", "Key Differentiators")
+    data["differentiators"] = _clean_list(diffs or strat_md, 4)
+    feats = _section(report, "MVP Features", "MVP Scope", "Features")
+    data["mvp_features"] = _clean_list(feats or strat_md, 6)
 
-    # Risks
-    risk_md = _section(report, "Key Risks", "Risks", "Business Model")
-    risks = []
-    for l in risk_md.splitlines():
-        if re.match(r"^\s*[-*•\d]", l) and len(l) > 15:
-            risks.append({"title": re.sub(r"^[-*•\d.]+\s*", "", l).strip()[:120],
-                          "severity": "medium", "likelihood": "medium", "mitigation": ""})
-    data["risks"] = risks[:4]
+    # Financials, pricing, GTM, SWOT, risks — parsed from their report sections so
+    # the dashboard stays complete even when the LLM synthesis path is unavailable.
+    data["financials"] = _parse_financials_md(report)
+    data["pricing_tiers"] = _parse_pricing_md(report)
+    data["gtm"] = _parse_gtm_md(report)
+    data["swot"] = _parse_swot_md(report)
+    data["risks"] = _parse_risks_md(report)
 
     return data
 
